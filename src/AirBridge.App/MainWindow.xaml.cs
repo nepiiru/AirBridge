@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private string _appliedReceiverName = "AirBridge";
     private bool _appliedAppendHostname = true;
     private NowPlaying _nowPlaying = new();
+    private double _lastProgressDuration;
     private SavedSettings _settings = new();
     private string _statusBrushKey = "MutedBrush";
     private string _videoBrushKey = "MutedBrush";
@@ -647,6 +648,7 @@ public partial class MainWindow : Window
         ArtworkImage.Source = null;
         ArtworkImage.Visibility = Visibility.Collapsed;
         ArtworkFallback.Visibility = Visibility.Visible;
+        _lastProgressDuration = 0;
         Progress.Value = 0;
         PositionText.Text = "0:00";
         DurationText.Text = "0:00";
@@ -696,18 +698,30 @@ public partial class MainWindow : Window
 
     private void ApplyProgress(double position, double duration)
     {
-        if (duration <= 0 || double.IsNaN(duration) || double.IsInfinity(duration))
+        if (double.IsNaN(position) || double.IsInfinity(position) || position < 0)
         {
-            Progress.Value = 0;
-            PositionText.Text = "0:00";
-            DurationText.Text = "0:00";
-            return;
+            position = 0;
         }
 
-        position = Math.Clamp(position, 0, duration);
-        Progress.Value = duration > 0 ? position / duration * 100.0 : 0;
+        if (!double.IsNaN(duration) && !double.IsInfinity(duration) && duration > 0)
+        {
+            _lastProgressDuration = duration;
+        }
+
+        var knownDuration = _lastProgressDuration > 0 ? _lastProgressDuration : 0;
+        if (knownDuration > 0)
+        {
+            position = Math.Clamp(position, 0, knownDuration);
+            Progress.Value = position / knownDuration * 100.0;
+            DurationText.Text = FormatTime(knownDuration);
+        }
+        else
+        {
+            Progress.Value = 0;
+            DurationText.Text = "0:00";
+        }
+
         PositionText.Text = FormatTime(position);
-        DurationText.Text = FormatTime(duration);
     }
 
     private void ApplyRemoteVolume(double db)
