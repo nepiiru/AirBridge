@@ -1,0 +1,3 @@
+[submodule "native/UxPlay"]
+	path = native/UxPlay
+	url = https://github.com/nepiiru/UxPlay.git
