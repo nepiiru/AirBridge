@@ -24,6 +24,8 @@ public partial class MainWindow : Window
     private string _appliedReceiverName = "AirBridge";
     private bool _appliedAppendHostname = true;
     private NowPlaying _nowPlaying = new();
+    private DateTime _lastArtworkAtUtc = DateTime.MinValue;
+    private static readonly TimeSpan ArtworkGracePeriod = TimeSpan.FromSeconds(5);
     private double _lastProgressDuration;
     private SavedSettings _settings = new();
     private string _statusBrushKey = "MutedBrush";
@@ -645,9 +647,7 @@ public partial class MainWindow : Window
         TrackTitle.Text = "—";
         TrackArtist.Text = "";
         TrackAlbum.Text = "";
-        ArtworkImage.Source = null;
-        ArtworkImage.Visibility = Visibility.Collapsed;
-        ArtworkFallback.Visibility = Visibility.Visible;
+        ClearArtwork();
         _lastProgressDuration = 0;
         Progress.Value = 0;
         PositionText.Text = "0:00";
@@ -665,12 +665,27 @@ public partial class MainWindow : Window
         TrackArtist.Text = metadata.Artist ?? "";
         TrackAlbum.Text = metadata.Album ?? "";
 
-        if (titleChanged || string.IsNullOrWhiteSpace(metadata.Title))
+        if (string.IsNullOrWhiteSpace(metadata.Title))
         {
-            ArtworkImage.Source = null;
-            ArtworkImage.Visibility = Visibility.Collapsed;
-            ArtworkFallback.Visibility = Visibility.Visible;
+            ClearArtwork();
         }
+        else if (titleChanged &&
+                 DateTime.UtcNow - _lastArtworkAtUtc > ArtworkGracePeriod)
+        {
+            // iOS sometimes sends the new cover art just before the track
+            // metadata.  Only discard artwork that is clearly from the
+            // previous track; otherwise the fresh image would be cleared and
+            // would never be sent again for this track.
+            ClearArtwork();
+        }
+    }
+
+    private void ClearArtwork()
+    {
+        ArtworkImage.Source = null;
+        ArtworkImage.Visibility = Visibility.Collapsed;
+        ArtworkFallback.Visibility = Visibility.Visible;
+        _lastArtworkAtUtc = DateTime.MinValue;
     }
 
     private void ApplyArtwork(byte[] bytes)
@@ -686,6 +701,8 @@ public partial class MainWindow : Window
             image.EndInit();
             image.Freeze();
 
+            NativeLog.Write($"artwork {bytes.Length} bytes, {image.PixelWidth}x{image.PixelHeight}");
+            _lastArtworkAtUtc = DateTime.UtcNow;
             ArtworkImage.Source = image;
             ArtworkImage.Visibility = Visibility.Visible;
             ArtworkFallback.Visibility = Visibility.Collapsed;

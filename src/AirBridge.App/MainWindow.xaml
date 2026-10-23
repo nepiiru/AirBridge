@@ -225,9 +225,13 @@
 
                                     <Border Width="96" Height="96" CornerRadius="8"
                                             Background="{DynamicResource Surface2Brush}"
-                                            ClipToBounds="True">
+                                            ClipToBounds="True"
+                                            SnapsToDevicePixels="True">
                                         <Grid>
-                                            <Image x:Name="ArtworkImage" Stretch="UniformToFill"
+                                            <Image x:Name="ArtworkImage" Width="96" Height="96"
+                                                   Stretch="Uniform"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
                                                    Visibility="Collapsed" />
                                             <TextBlock x:Name="ArtworkFallback" Text="♪" FontSize="34"
                                                        Foreground="{DynamicResource MutedBrush}"
